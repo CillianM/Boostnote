@@ -5,6 +5,7 @@ const dataApi = {
   renameStorage: require('./renameStorage'),
   removeStorage: require('./removeStorage'),
   createFolder: require('./createFolder'),
+  createSubFolder: require('./createSubFolder'),
   updateFolder: require('./updateFolder'),
   deleteFolder: require('./deleteFolder'),
   reorderFolder: require('./reorderFolder'),

@@ -130,7 +130,7 @@ class NoteList extends React.Component {
     const note = this.notes[0]
     const prevKey = prevProps.location.query.key
     const noteKey = visibleNoteKeys.includes(prevKey) ? prevKey : note && note.key
-
+    console.log(location)
     if (note && location.query.key == null) {
       const { router } = this.context
       if (!location.pathname.match(/\/searched/)) this.contextNotes = this.getContextNotes()
@@ -912,11 +912,14 @@ class NoteList extends React.Component {
 
   getViewType () {
     const { pathname } = this.props.location
+    console.log(pathname)
     const folder = /\/folders\/[a-zA-Z0-9]+/.test(pathname)
+    const subFolder = /\/folders\/[a-zA-Z0-9]+\/subFolders\/[a-zA-Z0-9]+/.test(pathname)
     const storage = /\/storages\/[a-zA-Z0-9]+/.test(pathname) && !folder
     const allNotes = pathname === '/home'
     if (allNotes) return 'ALL'
     if (folder) return 'FOLDER'
+    if (subFolder) return 'FOLDER'
     if (storage) return 'STORAGE'
   }
 

@@ -54,22 +54,37 @@ class CreateFolderModal extends React.Component {
     AwsMobileAnalyticsConfig.recordDynamicCustomEvent('ADD_FOLDER')
     if (this.state.name.trim().length > 0) {
       const { storage } = this.props
+      const { isSubFolder } = this.props
       const input = {
         name: this.state.name.trim(),
         color: consts.FOLDER_COLORS[Math.floor(Math.random() * 7) % 7]
       }
-
-      dataApi.createFolder(storage.key, input)
-        .then((data) => {
-          store.dispatch({
-            type: 'UPDATE_FOLDER',
-            storage: data.storage
+      if (isSubFolder) {
+        const { containingFolder } = this.props
+        dataApi.createSubFolder(containingFolder, storage.key, input)
+          .then((data) => {
+            store.dispatch({
+              type: 'UPDATE_FOLDER',
+              storage: data.storage
+            })
+            this.props.close()
           })
-          this.props.close()
-        })
-        .catch((err) => {
-          console.error(err)
-        })
+          .catch((err) => {
+            console.error(err)
+          })
+      } else {
+        dataApi.createFolder(storage.key, input)
+          .then((data) => {
+            store.dispatch({
+              type: 'UPDATE_FOLDER',
+              storage: data.storage
+            })
+            this.props.close()
+          })
+          .catch((err) => {
+            console.error(err)
+          })
+      }
     }
   }
 
@@ -107,6 +122,12 @@ class CreateFolderModal extends React.Component {
 CreateFolderModal.propTypes = {
   storage: PropTypes.shape({
     key: PropTypes.string
+  }),
+  containingFolder: PropTypes.shape({
+    key: PropTypes.string
+  }),
+  isSubFolder: PropTypes.shape({
+    key: PropTypes.bool
   })
 }
 

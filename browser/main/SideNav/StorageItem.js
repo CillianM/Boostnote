@@ -8,6 +8,7 @@ import CreateFolderModal from 'browser/main/modals/CreateFolderModal'
 import RenameFolderModal from 'browser/main/modals/RenameFolderModal'
 import dataApi from 'browser/main/lib/dataApi'
 import StorageItemChild from 'browser/components/StorageItem'
+import SubStorageItemChild from 'browser/components/SubStorageItem'
 import _ from 'lodash'
 import { SortableElement } from 'react-sortable-hoc'
 import i18n from 'browser/lib/i18n'
@@ -144,8 +145,20 @@ class StorageItem extends React.Component {
     }
   }
 
+  handleSubFolderButtonContextMenu (e, folder, subfolder) {
+    context.popup([
+      {
+        type: 'separator'
+      }
+    ])
+  }
+
   handleFolderButtonContextMenu (e, folder) {
     context.popup([
+      {
+        label: i18n.__('New Sub Folder'),
+        click: (e) => this.handleNewSubFolderClick(e, folder)
+      },
       {
         label: i18n.__('Rename Folder'),
         click: (e) => this.handleRenameFolderClick(e, folder)
@@ -174,6 +187,17 @@ class StorageItem extends React.Component {
         click: (e) => this.handleFolderDeleteClick(e, folder)
       }
     ])
+  }
+
+  handleNewSubFolderClick (e, containingFolder) {
+    const { storage } = this.props
+    const isSubFolder = true
+
+    modal.open(CreateFolderModal, {
+      storage,
+      containingFolder,
+      isSubFolder
+    })
   }
 
   handleRenameFolderClick (e, folder) {
@@ -270,39 +294,83 @@ class StorageItem extends React.Component {
   }
 
   render () {
-    const { storage, location, isFolded, data, dispatch } = this.props
-    const { folderNoteMap, trashedSet } = data
+    const {storage, location, isFolded, data, dispatch} = this.props
+    const {folderNoteMap, trashedSet} = data
     const SortableStorageItemChild = SortableElement(StorageItemChild)
+    const SortableSubStorageItemChild = SortableElement(SubStorageItemChild)
     const folderList = storage.folders.map((folder, index) => {
-      let folderRegex = new RegExp(escapeStringRegexp(path.sep) + 'storages' + escapeStringRegexp(path.sep) + storage.key + escapeStringRegexp(path.sep) + 'folders' + escapeStringRegexp(path.sep) + folder.key)
-      const isActive = !!(location.pathname.match(folderRegex))
-      const noteSet = folderNoteMap.get(storage.key + '-' + folder.key)
+      if (!folder.type) {
+        let folderRegex = new RegExp(escapeStringRegexp(path.sep) + 'storages' + escapeStringRegexp(path.sep) + storage.key + escapeStringRegexp(path.sep) + 'folders' + escapeStringRegexp(path.sep) + folder.key)
+        const isActive = !!(location.pathname.match(folderRegex))
+        const noteSet = folderNoteMap.get(storage.key + '-' + folder.key)
+        let containedFolderList
+        if (folder.containingFolders) {
+          containedFolderList = folder.containingFolders.map((subFolder, index) => {
+            let folderRegex = new RegExp(escapeStringRegexp(path.sep) + 'storages' + escapeStringRegexp(path.sep) + storage.key + escapeStringRegexp(path.sep) + 'folders' + escapeStringRegexp(path.sep) + subFolder.key)
+            const isSubActive = !!(location.pathname.match(folderRegex))
+            const noteSet = folderNoteMap.get(storage.key + '-' + subFolder.key)
+            let noteCount = 0
+            if (noteSet) {
+              let trashedNoteCount = 0
+              const noteKeys = noteSet.map(noteKey => { return noteKey })
+              trashedSet.toJS().forEach(trashedKey => {
+                if (noteKeys.some(noteKey => { return noteKey === trashedKey })) trashedNoteCount++
+              })
+              noteCount = noteSet.size - trashedNoteCount
+            }
+            return (
+              <SortableSubStorageItemChild
+                key={subFolder.key}
+                index={index}
+                isParentActive={isActive}
+                isActive={isSubActive}
+                handleButtonClick={(e) => this.handleFolderButtonClick(subFolder.key)(e)}
+                handleContextMenu={(e) => this.handleSubFolderButtonContextMenu(e, folder, subFolder)}
+                folderName={subFolder.name}
+                folderColor={subFolder.color}
+                isFolded={isFolded}
+                noteCount={noteCount}
+                handleDrop={(e) => this.handleDrop(e, storage, subFolder, dispatch, location)}
+                handleDragEnter={this.handleDragEnter}
+                handleDragLeave={this.handleDragLeave}
+              />
+            )
+          })
+        }
 
-      let noteCount = 0
-      if (noteSet) {
-        let trashedNoteCount = 0
-        const noteKeys = noteSet.map(noteKey => { return noteKey })
-        trashedSet.toJS().forEach(trashedKey => {
-          if (noteKeys.some(noteKey => { return noteKey === trashedKey })) trashedNoteCount++
-        })
-        noteCount = noteSet.size - trashedNoteCount
+        let noteCount = 0
+        if (noteSet) {
+          let trashedNoteCount = 0
+          const noteKeys = noteSet.map(noteKey => { return noteKey })
+          trashedSet.toJS().forEach(trashedKey => {
+            if (noteKeys.some(noteKey => { return noteKey === trashedKey })) trashedNoteCount++
+          })
+          noteCount = noteSet.size - trashedNoteCount
+        }
+        return (
+          <div>
+            <SortableStorageItemChild
+              key={folder.key}
+              index={index}
+              isActive={isActive}
+              handleButtonClick={(e) => this.handleFolderButtonClick(folder.key)(e)}
+              handleContextMenu={(e) => this.handleFolderButtonContextMenu(e, folder)}
+              folderName={folder.name}
+              folderColor={folder.color}
+              isFolded={isFolded}
+              noteCount={noteCount}
+              handleDrop={(e) => this.handleDrop(e, storage, folder, dispatch, location)}
+              handleDragEnter={this.handleDragEnter}
+              handleDragLeave={this.handleDragLeave}
+            />
+            {this.state.isOpen &&
+            <div styleName='subFolderList'>
+              {containedFolderList}
+            </div>
+            }
+          </div>
+        )
       }
-      return (
-        <SortableStorageItemChild
-          key={folder.key}
-          index={index}
-          isActive={isActive}
-          handleButtonClick={(e) => this.handleFolderButtonClick(folder.key)(e)}
-          handleContextMenu={(e) => this.handleFolderButtonContextMenu(e, folder)}
-          folderName={folder.name}
-          folderColor={folder.color}
-          isFolded={isFolded}
-          noteCount={noteCount}
-          handleDrop={(e) => this.handleDrop(e, storage, folder, dispatch, location)}
-          handleDragEnter={this.handleDragEnter}
-          handleDragLeave={this.handleDragLeave}
-        />
-      )
     })
 
     const isActive = location.pathname.match(new RegExp(escapeStringRegexp(path.sep) + 'storages' + escapeStringRegexp(path.sep) + storage.key + '$'))

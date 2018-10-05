@@ -32,6 +32,15 @@
     color #1EC38B;
     background-color alpha($ui-button-default--active-backgroundColor, 50%)
 
+.subFolderList-item
+  @extend .folderList-item
+  display none
+
+.subFolderList-item--active
+  @extend .folderList-item
+  padding-left  10px
+  visibility visible
+
 .folderList-item-name
   display block
   flex 1
